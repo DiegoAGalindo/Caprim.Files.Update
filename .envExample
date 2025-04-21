@@ -1,0 +1,9 @@
+MYSQL_ROOT_PASSWORD=DavidDiego2025.
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=CaprimDB
+MYSQL_USER=caprimuser
+MYSQL_PASSWORD=DavidDiego2025.
+CONTAINER_NAME=ContainerCaprim
+# LOG_FILE=logs/app.log 
+# LOG_LEVEL=info    
