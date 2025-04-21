@@ -6,7 +6,7 @@ public interface ITradeRepository<T> where T : class
 {
     Task<bool> AddRangeAsync(IEnumerable<T> entities);
 
-    Task<bool> ExistsAsync(string orderNumber);
+    Task<bool> ExistsAsync(string id);
 
     Task<IEnumerable<T>> GetAllAsync();
 }
