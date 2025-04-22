@@ -25,7 +25,6 @@ public class MariaDbContext : DbContext
         {
             entity.ToTable("BinanceSpotHistory");
             entity.HasKey(e => e.OrderNo);
-            entity.Property(e => e.DateUtc).HasColumnName("Date(UTC)");
             entity.HasIndex(e => e.DateUtc);
         });
     }

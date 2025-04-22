@@ -17,7 +17,7 @@ public class ExcelAdapter
         {
             var trade = new BinanceSpotHistory
             {
-                DateUtc = row.Cell(1).GetDateTime(),
+                DateUtc = DateTime.Parse(row.Cell(1).GetString()),
                 OrderNo = row.Cell(2).GetString(),
                 Pair = row.Cell(3).GetString(),
                 BaseAsset = row.Cell(4).GetString(),
@@ -28,7 +28,7 @@ public class ExcelAdapter
                 AvgTradingPrice = decimal.Parse(row.Cell(9).GetString()),
                 Filled = decimal.Parse(row.Cell(10).GetString()),
                 Total = decimal.Parse(row.Cell(11).GetString()),
-                Status = row.Cell(12).GetString()
+                Status = row.Cell(13).GetString()
             };
 
             trades.Add(trade);
@@ -36,4 +36,4 @@ public class ExcelAdapter
 
         return await Task.FromResult(trades);
     }
-} 
+}
