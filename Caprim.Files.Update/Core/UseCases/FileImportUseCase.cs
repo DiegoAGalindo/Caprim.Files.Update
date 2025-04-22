@@ -38,6 +38,7 @@ public class FileImportUseCase : IFileImportUseCase
             {
                 case "binancep2p":
                     var p2pTrades = await _csvAdapter.ReadBinanceP2PAsync(filePath);
+                    p2pTrades = p2pTrades.Where(x => x.OrderType?.Contains("Buy") == true);
                     var p2pResult = await _p2pRepository.AddRangeAsync(p2pTrades);
                     return (p2pResult, "P2P trades imported successfully");
 

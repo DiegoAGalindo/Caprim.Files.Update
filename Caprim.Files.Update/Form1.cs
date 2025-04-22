@@ -1,10 +1,23 @@
+using Caprim.Files.Update.Core.Ports.Input;
+
 namespace Caprim.Files.Update
 {
     public partial class Form1 : Form
     {
-        public Form1()
+        private readonly IFileImportUseCase _fileImportUseCase;
+        private readonly Dictionary<string, string> _tipoArchivoMapping;
+
+        public Form1(IFileImportUseCase fileImportUseCase)
         {
             InitializeComponent();
+            _fileImportUseCase = fileImportUseCase;
+
+            _tipoArchivoMapping = new Dictionary<string, string>
+            {
+                { "P2P", "binancep2p" },
+                { "OrderSpot", "binanceorderspot" }
+            };
+
             ConfigurarControles();
         }
 
@@ -13,7 +26,7 @@ namespace Caprim.Files.Update
             // Configurar el TextBox de proceso para que sea de solo lectura y tenga scroll
             txtProceso.ReadOnly = true;
             txtProceso.ScrollBars = ScrollBars.Vertical;
-            
+
             // Asegurar que el ComboBox tenga un valor seleccionado
             if (cboTipoArchivo.SelectedIndex == -1)
                 cboTipoArchivo.SelectedIndex = 0;
@@ -39,11 +52,7 @@ namespace Caprim.Files.Update
 
             try
             {
-                btnProcesar.Enabled = false;
-                btnSourcePath.Enabled = false;
-                cboTipoArchivo.Enabled = false;
-                txtCarpeta.Enabled = false;
-                
+                ToggleControles(false);
                 await ProcesarArchivosAsync();
             }
             catch (Exception ex)
@@ -52,11 +61,16 @@ namespace Caprim.Files.Update
             }
             finally
             {
-                btnProcesar.Enabled = true;
-                btnSourcePath.Enabled = true;
-                cboTipoArchivo.Enabled = true;
-                txtCarpeta.Enabled = true;
+                ToggleControles(true);
             }
+        }
+
+        private void ToggleControles(bool enabled)
+        {
+            btnProcesar.Enabled = enabled;
+            btnSourcePath.Enabled = enabled;
+            cboTipoArchivo.Enabled = enabled;
+            txtCarpeta.Enabled = enabled;
         }
 
         private bool ValidarEntradas()
@@ -79,28 +93,31 @@ namespace Caprim.Files.Update
                 return false;
             }
 
+            if (!_tipoArchivoMapping.ContainsKey(cboTipoArchivo.Text))
+            {
+                MostrarError("Tipo de archivo no válido");
+                return false;
+            }
+
             return true;
         }
 
         private async Task ProcesarArchivosAsync()
         {
-            AgregarLog("Iniciando procesamiento de archivos...");
-            
-            string[] archivos = Directory.GetFiles(txtCarpeta.Text, "*.*", SearchOption.AllDirectories);
-            
-            if (archivos.Length == 0)
-            {
-                AgregarLog("No se encontraron archivos para procesar.");
-                return;
-            }
+            string tipoArchivo = _tipoArchivoMapping[cboTipoArchivo.Text];
 
-            AgregarLog($"Se encontraron {archivos.Length} archivos.");
-            
-            foreach (string archivo in archivos)
+            AgregarLog($"Iniciando procesamiento de archivos {cboTipoArchivo.Text}...");
+
+            var resultado = await _fileImportUseCase.ProcessDirectoryAsync(txtCarpeta.Text, tipoArchivo);
+
+            if (resultado.Success)
             {
-                AgregarLog($"Procesando: {Path.GetFileName(archivo)}");
-                await Task.Delay(100); // Simulación de procesamiento
-                // TODO: Implementar el procesamiento específico según el tipo de archivo
+                AgregarLog($"Éxito: {resultado.Message}");
+            }
+            else
+            {
+                AgregarLog($"Error: {resultado.Message}");
+                MostrarError(resultado.Message);
             }
 
             AgregarLog("Proceso completado.");
@@ -121,6 +138,10 @@ namespace Caprim.Files.Update
         private void MostrarError(string mensaje)
         {
             MessageBox.Show(mensaje, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
         }
     }
 }

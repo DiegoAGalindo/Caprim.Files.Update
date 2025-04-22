@@ -104,6 +104,7 @@
             Controls.Add(btnSourcePath);
             Name = "Form1";
             Text = "Procesador de Archivos";
+            Load += Form1_Load;
             ResumeLayout(false);
             PerformLayout();
         }

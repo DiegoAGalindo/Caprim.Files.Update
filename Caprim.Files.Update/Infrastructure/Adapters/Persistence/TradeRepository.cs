@@ -22,8 +22,10 @@ public class TradeRepository<T> : ITradeRepository<T> where T : class
             await _context.SaveChangesAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            // Log the exception (if logging is set up)
+            Console.WriteLine($"Error adding range: {ex.Message}");
             return false;
         }
     }
