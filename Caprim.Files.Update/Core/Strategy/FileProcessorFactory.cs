@@ -18,16 +18,26 @@ public class FileProcessorFactory : IFileProcessorFactory
     public IFileProcessor<T> GetProcessor<T>(string fileType) where T : class
     {
         _logger.LogInformation("Solicitando procesador para tipo: {FileType} y modelo: {ModelType}", fileType, typeof(T).Name);
-        
+
         if (typeof(T) == typeof(BinanceP2P) && fileType.ToLower() == "binancep2p")
         {
-            return (IFileProcessor<T>)_serviceProvider.GetService(typeof(BinanceP2PCsvProcessor));
+            var processor = _serviceProvider.GetService(typeof(BinanceP2PCsvProcessor)) as IFileProcessor<T>;
+            if (processor == null)
+            {
+                throw new InvalidOperationException($"No se pudo resolver el procesador para tipo: {fileType} y modelo: {typeof(T).Name}");
+            }
+            return processor;
         }
         else if (typeof(T) == typeof(BinanceSpotHistory) && fileType.ToLower() == "binanceorderspot")
         {
-            return (IFileProcessor<T>)_serviceProvider.GetService(typeof(BinanceSpotExcelProcessor));
+            var processor = _serviceProvider.GetService(typeof(BinanceSpotExcelProcessor)) as IFileProcessor<T>;
+            if (processor == null)
+            {
+                throw new InvalidOperationException($"No se pudo resolver el procesador para tipo: {fileType} y modelo: {typeof(T).Name}");
+            }
+            return processor;
         }
-        
+
         throw new InvalidOperationException($"No se encontró procesador para tipo: {fileType} y modelo: {typeof(T).Name}");
     }
-} 
+}
