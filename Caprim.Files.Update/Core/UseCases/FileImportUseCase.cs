@@ -1,5 +1,6 @@
 using Caprim.Files.Update.Core.Ports.Input;
 using Caprim.Files.Update.Core.Ports.Output;
+using Caprim.Files.Update.Core.Strategy;
 using Caprim.Files.Update.Domain.Models;
 using Caprim.Files.Update.Infrastructure.Adapters.FileProcessing;
 using Microsoft.Extensions.Logging;
@@ -10,21 +11,18 @@ public class FileImportUseCase : IFileImportUseCase
 {
     private readonly ITradeRepository<BinanceP2P> _p2pRepository;
     private readonly ITradeRepository<BinanceSpotHistory> _spotRepository;
-    private readonly CsvAdapter _csvAdapter;
-    private readonly ExcelAdapter _excelAdapter;
+    private readonly IFileProcessorFactory _fileProcessorFactory;
     private readonly ILogger<FileImportUseCase> _logger;
 
     public FileImportUseCase(
         ITradeRepository<BinanceP2P> p2pRepository,
         ITradeRepository<BinanceSpotHistory> spotRepository,
-        CsvAdapter csvAdapter,
-        ExcelAdapter excelAdapter,
+        IFileProcessorFactory fileProcessorFactory,
         ILogger<FileImportUseCase> logger)
     {
         _p2pRepository = p2pRepository;
         _spotRepository = spotRepository;
-        _csvAdapter = csvAdapter;
-        _excelAdapter = excelAdapter;
+        _fileProcessorFactory = fileProcessorFactory;
         _logger = logger;
     }
 
@@ -32,29 +30,63 @@ public class FileImportUseCase : IFileImportUseCase
     {
         try
         {
-            _logger.LogInformation("Starting import of file: {FilePath} of type: {FileType}", filePath, fileType);
+            _logger.LogInformation("Iniciando importación de archivo: {FilePath} de tipo: {FileType}", 
+                filePath, fileType);
+            var fileName = Path.GetFileName(filePath);
 
             switch (fileType.ToLower())
             {
                 case "binancep2p":
-                    var p2pTrades = await _csvAdapter.ReadBinanceP2PAsync(filePath);
-                    p2pTrades = p2pTrades.Where(x => x.OrderType?.Contains("Buy") == true);
-                    var p2pResult = await _p2pRepository.AddRangeAsync(p2pTrades);
-                    return (p2pResult, "P2P trades imported successfully");
+                    _logger.LogDebug("Obteniendo procesador para archivo P2P: {FileName}", fileName);
+                    var p2pProcessor = _fileProcessorFactory.GetProcessor<BinanceP2P>(fileType);
+                    
+                    _logger.LogDebug("Iniciando procesamiento de archivo P2P: {FileName}", fileName);
+                    var p2pTrades = await p2pProcessor.ProcessAsync(filePath);
+                    var p2pTradesList = p2pTrades.ToList();
+                    
+                    _logger.LogInformation("Se obtuvieron {Count} registros del archivo P2P: {FileName}",
+                        p2pTradesList.Count, fileName);
+                    
+                    _logger.LogDebug("Guardando {Count} registros P2P en base de datos", p2pTradesList.Count);
+                    var p2pResult = await _p2pRepository.AddRangeAsync(p2pTradesList);
+                    
+                    var resultMessage = $"Operaciones P2P importadas exitosamente: {p2pTradesList.Count} registros";
+                    _logger.LogInformation("Resultado importación P2P: {Success}, {Message}", 
+                        p2pResult, resultMessage);
+                    
+                    return (p2pResult, resultMessage);
 
                 case "binanceorderspot":
-                    var spotTrades = await _excelAdapter.ReadBinanceSpotHistoryAsync(filePath);
-                    var spotResult = await _spotRepository.AddRangeAsync(spotTrades);
-                    return (spotResult, "Spot trades imported successfully");
+                    _logger.LogDebug("Obteniendo procesador para archivo Spot: {FileName}", fileName);
+                    var spotProcessor = _fileProcessorFactory.GetProcessor<BinanceSpotHistory>(fileType);
+                    
+                    _logger.LogDebug("Iniciando procesamiento de archivo Spot: {FileName}", fileName);
+                    var spotTrades = await spotProcessor.ProcessAsync(filePath);
+                    var spotTradesList = spotTrades.ToList();
+                    
+                    _logger.LogInformation("Se obtuvieron {Count} registros del archivo Spot: {FileName}",
+                        spotTradesList.Count, fileName);
+                    
+                    _logger.LogDebug("Guardando {Count} registros Spot en base de datos", spotTradesList.Count);
+                    var spotResult = await _spotRepository.AddRangeAsync(spotTradesList);
+                    
+                    var spotResultMessage = $"Operaciones Spot importadas exitosamente: {spotTradesList.Count} registros";
+                    _logger.LogInformation("Resultado importación Spot: {Success}, {Message}", 
+                        spotResult, spotResultMessage);
+                    
+                    return (spotResult, spotResultMessage);
 
                 default:
-                    return (false, $"Unsupported file type: {fileType}");
+                    var errorMessage = $"Tipo de archivo no soportado: {fileType}";
+                    _logger.LogWarning("Error de tipo de archivo: {ErrorMessage}", errorMessage);
+                    return (false, errorMessage);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error importing file: {FilePath}", filePath);
-            return (false, $"Error importing file: {ex.Message}");
+            _logger.LogError(ex, "Error importando archivo: {FilePath}. Error: {ErrorMessage}, StackTrace: {StackTrace}", 
+                filePath, ex.Message, ex.StackTrace);
+            return (false, $"Error importando archivo: {ex.Message}");
         }
     }
 
@@ -62,29 +94,66 @@ public class FileImportUseCase : IFileImportUseCase
     {
         try
         {
-            _logger.LogInformation("Processing directory: {DirectoryPath} for file type: {FileType}", directoryPath, fileType);
+            _logger.LogInformation("Procesando directorio: {DirectoryPath} para tipo de archivo: {FileType}", 
+                directoryPath, fileType);
 
             var extension = fileType.ToLower() == "binancep2p" ? "*.csv" : "*.xlsx";
             var files = Directory.GetFiles(directoryPath, extension);
+            
+            _logger.LogInformation("Se encontraron {FileCount} archivos de tipo {Extension} en {DirectoryPath}", 
+                files.Length, extension, directoryPath);
 
-            var successCount = 0;
-            var failCount = 0;
-
-            foreach (var file in files)
+            if (files.Length == 0)
             {
-                var result = await ImportFileAsync(file, fileType);
-                if (result.Success)
-                    successCount++;
-                else
-                    failCount++;
+                var noFilesMessage = $"No se encontraron archivos {extension} en el directorio";
+                _logger.LogWarning(noFilesMessage);
+                return (true, noFilesMessage);
             }
 
-            return (failCount == 0, $"Processed {successCount} files successfully, {failCount} files failed");
+            // Configuración de paralelismo ajustable según la capacidad del sistema
+            var maxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1);
+            var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+
+            _logger.LogInformation("Procesando {FileCount} archivos con {ThreadCount} hilos en paralelo", 
+                files.Length, maxDegreeOfParallelism);
+
+            // Contadores atómicos para estadísticas
+            var successCount = 0;
+            var failCount = 0;
+            var startTime = DateTime.Now;
+
+            // Procesamiento paralelo de archivos
+            await Parallel.ForEachAsync(files, parallelOptions, async (file, token) =>
+            {
+                _logger.LogDebug("Iniciando procesamiento paralelo de archivo: {FileName}", Path.GetFileName(file));
+                var result = await ImportFileAsync(file, fileType);
+                
+                if (result.Success)
+                {
+                    _logger.LogDebug("Archivo {FileName} procesado exitosamente", Path.GetFileName(file));
+                    Interlocked.Increment(ref successCount);
+                }
+                else
+                {
+                    _logger.LogWarning("Falló el procesamiento de archivo {FileName}: {Message}", 
+                        Path.GetFileName(file), result.Message);
+                    Interlocked.Increment(ref failCount);
+                }
+            });
+
+            var totalTime = DateTime.Now - startTime;
+            var resultMessage = $"Procesados {successCount} archivos exitosamente, {failCount} archivos fallidos en {totalTime.TotalSeconds:0.00} segundos";
+            
+            _logger.LogInformation("Finalizado procesamiento de directorio: {DirectoryPath}. {ResultMessage}", 
+                directoryPath, resultMessage);
+
+            return (failCount == 0, resultMessage);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing directory: {DirectoryPath}", directoryPath);
-            return (false, $"Error processing directory: {ex.Message}");
+            _logger.LogError(ex, "Error procesando directorio: {DirectoryPath}. Error: {ErrorMessage}, StackTrace: {StackTrace}", 
+                directoryPath, ex.Message, ex.StackTrace);
+            return (false, $"Error procesando directorio: {ex.Message}");
         }
     }
 }
