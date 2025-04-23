@@ -1,5 +1,6 @@
 using Caprim.Files.Update.Core.Ports.Input;
 using Caprim.Files.Update.Core.Ports.Output;
+using Caprim.Files.Update.Core.Strategy;
 using Caprim.Files.Update.Core.UseCases;
 using Caprim.Files.Update.Infrastructure.Adapters.FileProcessing;
 using Caprim.Files.Update.Infrastructure.Adapters.Persistence;
@@ -7,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using System.IO;
+using System.Windows.Forms;
 
 namespace Caprim.Files.Update
 {
@@ -28,20 +32,49 @@ namespace Caprim.Files.Update
                 //.AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true, reloadOnChange: true)
                 .Build();
 
-            var services = new ServiceCollection();
-            services.AddSingleton<IConfiguration>(configuration);
-            ConfigureServices(services, configuration);
+            // Asegurar que el directorio de logs exista
+            var logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
+            if (!Directory.Exists(logsDirectory))
+            {
+                Directory.CreateDirectory(logsDirectory);
+            }
 
-            using var serviceProvider = services.BuildServiceProvider();
-            var form = serviceProvider.GetRequiredService<Form1>();
+            // Configurar Serilog
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(configuration)
+                .CreateLogger();
 
-            Application.Run(form);
+            try
+            {
+                Log.Information("Iniciando aplicación Caprim.Files.Update");
+
+                var services = new ServiceCollection();
+                services.AddSingleton<IConfiguration>(configuration);
+                ConfigureServices(services, configuration);
+
+                using var serviceProvider = services.BuildServiceProvider();
+                var form = serviceProvider.GetRequiredService<MainForm>();
+
+                Application.Run(form);
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "La aplicación falló al iniciar");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
 
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
-            // Logging
-            services.AddLogging(configure => configure.AddConsole());
+            // Configuración de Logging
+            services.AddLogging(configure => 
+            {
+                configure.ClearProviders();
+                configure.AddSerilog(dispose: true);
+            });
 
             // Database
             var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -49,7 +82,7 @@ namespace Caprim.Files.Update
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
             // Form
-            services.AddTransient<Form1>();
+            services.AddTransient<MainForm>();
 
             // Use Cases
             services.AddScoped<IFileImportUseCase, FileImportUseCase>();
@@ -57,6 +90,11 @@ namespace Caprim.Files.Update
             // Adapters
             services.AddScoped<CsvAdapter>();
             services.AddScoped<ExcelAdapter>();
+
+            // Processors (Strategy Pattern)
+            services.AddScoped<BinanceP2PCsvProcessor>();
+            services.AddScoped<BinanceSpotExcelProcessor>();
+            services.AddScoped<IFileProcessorFactory, FileProcessorFactory>();
 
             // Repositories
             services.AddScoped(typeof(ITradeRepository<>), typeof(TradeRepository<>));
