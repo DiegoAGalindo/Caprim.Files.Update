@@ -30,7 +30,7 @@ public class TradeRepository<T> : ITradeRepository<T> where T : class
                 return true;
             }
 
-            _logger.LogInformation("Intentando agregar {Count} registros de tipo {EntityType}", 
+            _logger.LogInformation("Intentando agregar {Count} registros de tipo {EntityType}",
                 entitiesList.Count, typeof(T).Name);
 
             // Obtener el nombre de la propiedad clave primaria según el tipo de entidad
@@ -55,7 +55,7 @@ public class TradeRepository<T> : ITradeRepository<T> where T : class
             var propertyInfo = typeof(T).GetProperty(keyPropertyName);
             if (propertyInfo == null)
             {
-                _logger.LogError("No se encontró la propiedad {PropertyName} en la entidad {EntityType}", 
+                _logger.LogError("No se encontró la propiedad {PropertyName} en la entidad {EntityType}",
                     keyPropertyName, typeof(T).Name);
                 return false;
             }
@@ -98,21 +98,21 @@ public class TradeRepository<T> : ITradeRepository<T> where T : class
                             (i / batchSize) + 1, (newEntities.Count / batchSize) + 1, batch.Count);
                     }
                 }
-                
+
                 return true;
             }
-            
+
             return true;
         }
         catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Error de base de datos al agregar registros de tipo {EntityType}. Error: {Message}", 
+            _logger.LogError(ex, "Error de base de datos al agregar registros de tipo {EntityType}. Error: {Message}",
                 typeof(T).Name, ex.InnerException?.Message ?? ex.Message);
             return false;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error general al agregar registros de tipo {EntityType}. Error: {Message}", 
+            _logger.LogError(ex, "Error general al agregar registros de tipo {EntityType}. Error: {Message}",
                 typeof(T).Name, ex.Message);
             return false;
         }

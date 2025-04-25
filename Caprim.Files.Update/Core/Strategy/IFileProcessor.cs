@@ -8,4 +8,4 @@ public interface IFileProcessor<T> where T : class
     /// <param name="filePath">Ruta del archivo a procesar</param>
     /// <returns>Colección de entidades extraídas del archivo</returns>
     Task<IEnumerable<T>> ProcessAsync(string filePath);
-} 
+}

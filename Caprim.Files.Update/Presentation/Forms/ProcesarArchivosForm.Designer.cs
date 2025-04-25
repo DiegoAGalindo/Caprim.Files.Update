@@ -1,6 +1,6 @@
 ﻿namespace Caprim.Files.Update
 {
-    partial class MainForm
+    partial class ProcesarArchivosForm
     {
         /// <summary>
         ///  Required designer variable.

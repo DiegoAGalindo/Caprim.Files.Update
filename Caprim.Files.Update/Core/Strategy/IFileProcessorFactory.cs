@@ -9,4 +9,4 @@ public interface IFileProcessorFactory
     /// <param name="fileType">Tipo de archivo a procesar</param>
     /// <returns>Procesador de archivos apropiado</returns>
     IFileProcessor<T> GetProcessor<T>(string fileType) where T : class;
-} 
+}

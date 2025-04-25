@@ -43,4 +43,4 @@ public class TradeRepository<T> : ITradeRepository<T> where T : class
         await Task.Delay(50);
         return new List<T>();
     }
-} 
+}

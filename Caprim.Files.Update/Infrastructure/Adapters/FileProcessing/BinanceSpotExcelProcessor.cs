@@ -18,7 +18,7 @@ public class BinanceSpotExcelProcessor : IFileProcessor<BinanceSpotHistory>
     public async Task<IEnumerable<BinanceSpotHistory>> ProcessAsync(string filePath)
     {
         _logger.LogInformation("Procesando archivo Spot Excel: {FilePath}", filePath);
-        
+
         try
         {
             var records = await _excelAdapter.ReadBinanceSpotHistoryAsync(filePath);
@@ -31,4 +31,4 @@ public class BinanceSpotExcelProcessor : IFileProcessor<BinanceSpotHistory>
             throw;
         }
     }
-} 
+}

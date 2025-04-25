@@ -18,12 +18,12 @@ public class BinanceP2PCsvProcessor : IFileProcessor<BinanceP2P>
     public async Task<IEnumerable<BinanceP2P>> ProcessAsync(string filePath)
     {
         _logger.LogInformation("Procesando archivo P2P CSV: {FilePath}", filePath);
-        
+
         try
         {
             var records = await _csvAdapter.ReadBinanceP2PBatchAsync(filePath);
             _logger.LogInformation("Procesados registros del archivo P2P");
-            
+
             // Filtrar solo las operaciones de compra
             return records.Where(x => x.OrderType?.Contains("Buy") == true);
         }
@@ -33,4 +33,4 @@ public class BinanceP2PCsvProcessor : IFileProcessor<BinanceP2P>
             throw;
         }
     }
-} 
+}

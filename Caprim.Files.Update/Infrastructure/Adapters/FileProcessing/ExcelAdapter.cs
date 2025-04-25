@@ -18,25 +18,26 @@ public class ExcelAdapter
         _logger.LogInformation("Iniciando lectura del archivo Spot: {FilePath}", filePath);
         var trades = new List<BinanceSpotHistory>();
 
-        await Task.Run(() => {
+        await Task.Run(() =>
+        {
             try
             {
                 _logger.LogDebug("Abriendo archivo Excel: {FileName}", Path.GetFileName(filePath));
                 using var workbook = new XLWorkbook(filePath);
                 var worksheet = workbook.Worksheet(1);
-                
+
                 // Determinar el rango de datos reales para evitar procesamiento innecesario
                 var usedRange = worksheet.RangeUsed();
                 if (usedRange == null)
                 {
-                    _logger.LogWarning("El archivo {FileName} parece estar vacío, no se encontró ningún rango de datos", 
+                    _logger.LogWarning("El archivo {FileName} parece estar vacío, no se encontró ningún rango de datos",
                         Path.GetFileName(filePath));
                     return;
                 }
-                
-                _logger.LogDebug("Rango de datos encontrado: {RowCount} filas en archivo {FileName}", 
+
+                _logger.LogDebug("Rango de datos encontrado: {RowCount} filas en archivo {FileName}",
                     usedRange.RowCount(), Path.GetFileName(filePath));
-                
+
                 var rows = worksheet.RowsUsed().Skip(1); // Omitir encabezado
                 var processedRows = 0;
                 var errorRows = 0;
@@ -46,10 +47,10 @@ public class ExcelAdapter
                     try
                     {
                         var rowNumber = row.RowNumber();
-                        
+
                         var trade = new BinanceSpotHistory
                         {
-                            DateUtc = DateTime.Parse(row.Cell(1).GetString()),
+                            DateUtc = DateTime.TryParse(row.Cell(1).GetString(), out var date) ? date : DateTime.MinValue,
                             OrderNo = row.Cell(2).GetString(),
                             Pair = row.Cell(3).GetString(),
                             BaseAsset = row.Cell(4).GetString(),
@@ -65,27 +66,27 @@ public class ExcelAdapter
 
                         trades.Add(trade);
                         processedRows++;
-                        
+
                         if (processedRows % 1000 == 0)
                         {
-                            _logger.LogDebug("Procesadas {RowCount} filas del archivo {FileName}", 
+                            _logger.LogDebug("Procesadas {RowCount} filas del archivo {FileName}",
                                 processedRows, Path.GetFileName(filePath));
                         }
                     }
                     catch (Exception ex)
                     {
                         errorRows++;
-                        _logger.LogError(ex, "Error procesando fila #{RowNumber} en archivo {FilePath}: {ErrorMessage}", 
+                        _logger.LogError(ex, "Error procesando fila #{RowNumber} en archivo {FilePath}: {ErrorMessage}",
                             row.RowNumber(), Path.GetFileName(filePath), ex.Message);
                     }
                 }
 
-                _logger.LogInformation("Lectura completada de archivo {FileName}. {RowCount} filas procesadas, {ErrorCount} errores", 
+                _logger.LogInformation("Lectura completada de archivo {FileName}. {RowCount} filas procesadas, {ErrorCount} errores",
                     Path.GetFileName(filePath), processedRows, errorRows);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error crítico al leer el archivo Excel {FilePath}: {ErrorMessage}", 
+                _logger.LogError(ex, "Error crítico al leer el archivo Excel {FilePath}: {ErrorMessage}",
                     Path.GetFileName(filePath), ex.Message);
                 throw;
             }

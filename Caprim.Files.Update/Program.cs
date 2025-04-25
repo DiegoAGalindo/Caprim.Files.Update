@@ -4,6 +4,7 @@ using Caprim.Files.Update.Core.Strategy;
 using Caprim.Files.Update.Core.UseCases;
 using Caprim.Files.Update.Infrastructure.Adapters.FileProcessing;
 using Caprim.Files.Update.Infrastructure.Adapters.Persistence;
+using Caprim.Files.Update.Presentation.Forms;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +54,7 @@ namespace Caprim.Files.Update
                 ConfigureServices(services, configuration);
 
                 using var serviceProvider = services.BuildServiceProvider();
-                var form = serviceProvider.GetRequiredService<MainForm>();
+                var form = serviceProvider.GetRequiredService<PrincipalForm>();
 
                 Application.Run(form);
             }
@@ -70,7 +71,7 @@ namespace Caprim.Files.Update
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
             // Configuración de Logging
-            services.AddLogging(configure => 
+            services.AddLogging(configure =>
             {
                 configure.ClearProviders();
                 configure.AddSerilog(dispose: true);
@@ -81,8 +82,11 @@ namespace Caprim.Files.Update
             services.AddDbContext<MariaDbContext>(options =>
                 options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-            // Form
-            services.AddTransient<MainForm>();
+            // Forms
+            services.AddTransient<PrincipalForm>();
+            services.AddTransient<ExternalPayForm>();
+            services.AddTransient<ProcesarArchivosForm>();
+            services.AddTransient<ClienteForm>();
 
             // Use Cases
             services.AddScoped<IFileImportUseCase, FileImportUseCase>();

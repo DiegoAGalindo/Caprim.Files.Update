@@ -2,12 +2,12 @@ using Caprim.Files.Update.Core.Ports.Input;
 
 namespace Caprim.Files.Update
 {
-    public partial class MainForm : Form
+    public partial class ProcesarArchivosForm : Form
     {
         private readonly IFileImportUseCase _fileImportUseCase;
         private readonly Dictionary<string, string> _tipoArchivoMapping;
 
-        public MainForm(IFileImportUseCase fileImportUseCase)
+        public ProcesarArchivosForm(IFileImportUseCase fileImportUseCase)
         {
             InitializeComponent();
             _fileImportUseCase = fileImportUseCase;

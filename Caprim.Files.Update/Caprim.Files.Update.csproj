@@ -34,4 +34,28 @@
     <PackageReference Include="Serilog.Settings.Configuration" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Presentation\Forms\ClienteForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Presentation\Forms\ClienteForm.Designer.cs">
+      <DependentUpon>ClienteForm.cs</DependentUpon>
+    </Compile>
+    <Compile Update="Presentation\Forms\ExternalPayForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Presentation\Forms\ExternalPayForm.Designer.cs">
+      <DependentUpon>ExternalPayForm.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Presentation\Forms\ClienteForm.resx">
+      <DependentUpon>ClienteForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Presentation\Forms\ExternalPayForm.resx">
+      <DependentUpon>ExternalPayForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>
